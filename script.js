@@ -72,6 +72,7 @@ const state = {
   enemies: [],
   obstacles: [],
   powerups: [],
+  sparks: [],
   spawnTimer: 0,
   spawnInterval: 90,
   levelTimer: 0,
@@ -88,8 +89,9 @@ function clamp(value, min, max) {
 }
 
 function makeStars() {
-  if (!document.getElementById('sky')) return;
   const sky = document.getElementById('sky');
+  if (!sky) return;
+  sky.innerHTML = '';
   for (let i = 0; i < 80; i++) {
     const star = document.createElement('div');
     star.className = 'star';
@@ -103,6 +105,22 @@ function makeStars() {
       --min:${(Math.random() * 0.35 + 0.1).toFixed(2)};
     `;
     sky.appendChild(star);
+  }
+}
+
+function makeClouds() {
+  const sky = document.getElementById('sky');
+  if (!sky) return;
+  const existing = sky.querySelectorAll('.cloud');
+  existing.forEach((cloud) => cloud.remove());
+  for (let i = 0; i < 8; i++) {
+    const cloud = document.createElement('div');
+    cloud.className = 'cloud';
+    cloud.style.left = (Math.random() * 85 + 5) + '%';
+    cloud.style.top = (Math.random() * 18 + 6) + '%';
+    cloud.style.transform = `scale(${0.7 + Math.random() * 0.8})`;
+    cloud.style.animationDelay = (Math.random() * 4) + 's';
+    sky.appendChild(cloud);
   }
 }
 
@@ -238,7 +256,7 @@ function spawnPowerup() {
   state.powerups.push({ el, x, y: -60, type: type.type, label: type.label, color: type.color });
 }
 
-function burst(x, y, color, count = 12) {
+function burst(x, y, color, count = 12, sizeBoost = 1) {
   if (!wrapper) return;
   for (let i = 0; i < count; i++) {
     const p = document.createElement('div');
@@ -246,12 +264,13 @@ function burst(x, y, color, count = 12) {
     const angle = (i / count) * Math.PI * 2;
     const distance = 30 + Math.random() * 50;
     const duration = 0.4 + Math.random() * 0.6;
+    const particleSize = (4 + Math.random() * 6) * sizeBoost;
 
     p.style.cssText = `
       left:${x}px;
       top:${y}px;
-      width:${4 + Math.random() * 6}px;
-      height:${4 + Math.random() * 6}px;
+      width:${particleSize}px;
+      height:${particleSize}px;
       background:${color};
       box-shadow: 0 0 6px ${color};
       --tx:${Math.cos(angle) * distance}px;
@@ -262,6 +281,14 @@ function burst(x, y, color, count = 12) {
     wrapper.appendChild(p);
     setTimeout(() => p.remove(), duration * 1000);
   }
+}
+
+function sparkNitroTrail() {
+  if (!state.nitroActive || !wrapper) return;
+  const x = state.playerX + (Math.random() - 0.5) * 18;
+  const y = wrapper.clientHeight - PLAYER_BASE_Y - 20 + Math.random() * 40;
+  const color = Math.random() > 0.5 ? '#ff8a00' : '#ffe600';
+  burst(x, y, color, 4, 0.8);
 }
 
 function scorePopup(x, y, text, color) {
@@ -385,6 +412,7 @@ function loop(ts) {
     state.nitroActive = true;
     state.nitro = Math.max(0, state.nitro - 1.2 * dt);
     if (nitroTrail) nitroTrail.style.opacity = '1';
+    sparkNitroTrail();
   } else {
     state.nitroActive = false;
     state.nitro = Math.min(100, state.nitro + 0.3 * dt);
@@ -572,6 +600,7 @@ function startGame() {
   state.enemies = [];
   state.obstacles = [];
   state.powerups = [];
+  state.sparks = [];
   state.spawnTimer = 0;
   state.spawnInterval = 90;
   state.levelTimer = 0;
@@ -688,6 +717,7 @@ if (cursor) {
 }
 
 makeStars();
+makeClouds();
 makeLanes();
 drawGrid();
 updateHUD();
