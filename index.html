@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TURBO RUSH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="cursor"></div>
+
+    <div id="gameWrapper">
+      <div class="flashOverlay" id="flashOverlay"></div>
+
+      <div id="sky"></div>
+      <canvas id="groundGrid"></canvas>
+
+      <div id="road">
+        <div id="roadSurface"></div>
+        <div class="roadEdge" id="edgeLeft"></div>
+        <div class="roadEdge" id="edgeRight"></div>
+        <div id="laneContainer"></div>
+      </div>
+
+      <div class="nitroTrail" id="nitroTrail"></div>
+
+      <div id="playerCar" aria-label="Player car">
+        <svg viewBox="0 0 54 96" width="54" height="96" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="carGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ff2244" stop-opacity="0.2" />
+              <stop offset="100%" stop-color="#000" stop-opacity="0.4" />
+            </linearGradient>
+            <filter id="headlightBlur">
+              <feGaussianBlur stdDeviation="3" />
+            </filter>
+          </defs>
+
+          <path d="M10 70 L8 30 Q27 14 46 30 L44 70 Z" fill="#cc1133" />
+          <path d="M10 70 L8 30 Q27 14 46 30 L44 70 Z" fill="url(#carGrad)" />
+          <path d="M15 50 L13 28 Q27 18 41 28 L39 50 Z" fill="#880022" />
+          <path d="M17 48 L15 30 Q27 22 39 30 L37 48 Z" fill="#00ccff" opacity="0.7" />
+
+          <ellipse cx="18" cy="25" rx="5" ry="3" fill="#ffe600" />
+          <ellipse cx="36" cy="25" rx="5" ry="3" fill="#ffe600" />
+          <ellipse cx="18" cy="25" rx="5" ry="3" fill="#ffe600" opacity="0.5" filter="url(#headlightBlur)" />
+          <ellipse cx="36" cy="25" rx="5" ry="3" fill="#ffe600" opacity="0.5" filter="url(#headlightBlur)" />
+
+          <rect x="10" y="68" width="8" height="5" rx="2" fill="#ff0000" />
+          <rect x="36" y="68" width="8" height="5" rx="2" fill="#ff0000" />
+
+          <rect x="4" y="30" width="8" height="18" rx="4" fill="#222" />
+          <rect x="42" y="30" width="8" height="18" rx="4" fill="#222" />
+          <rect x="4" y="58" width="8" height="18" rx="4" fill="#222" />
+          <rect x="42" y="58" width="8" height="18" rx="4" fill="#222" />
+
+          <circle cx="8" cy="39" r="4" fill="#555" />
+          <circle cx="46" cy="39" r="4" fill="#555" />
+          <circle cx="8" cy="67" r="4" fill="#555" />
+          <circle cx="46" cy="67" r="4" fill="#555" />
+
+          <path d="M21 60 L21 35 L33 35 L33 60 Z" fill="#ffffff11" />
+          <text x="27" y="52" text-anchor="middle" fill="#fff" font-size="9" font-family="Orbitron" font-weight="900" opacity="0.9">01</text>
+        </svg>
+      </div>
+
+      <div id="hud">
+        <div class="hudBox">
+          <div class="hudLabel">Score</div>
+          <div class="hudValue" id="scoreVal">0</div>
+        </div>
+        <div class="hudBox">
+          <div class="hudLabel">Speed</div>
+          <div class="hudValue" id="speedVal">0</div>
+        </div>
+        <div class="hudBox">
+          <div class="hudLabel">Level</div>
+          <div class="hudValue" id="levelVal">1</div>
+        </div>
+        <div class="hudBox">
+          <div class="hudLabel">Lives</div>
+          <div class="hudValue" id="livesVal">❤️❤️❤️</div>
+        </div>
+      </div>
+
+      <div id="combo">
+        <div class="comboLabel">COMBO</div>
+        <div class="hudValue" id="comboVal">x1</div>
+      </div>
+
+      <div id="nitroBar">
+        <div id="nitroLabel">NITRO ⚡</div>
+        <div id="nitroBg"><div id="nitroFill"></div></div>
+      </div>
+
+      <div id="mobileControls">
+        <div class="mBtn" id="mLeft">◀</div>
+        <div class="mBtn" id="mNitro">⚡ NITRO</div>
+        <div class="mBtn" id="mRight">▶</div>
+      </div>
+
+      <div id="levelBanner">
+        <div class="lbTitle" id="lbTitle">LEVEL 2</div>
+        <div class="lbSub">SPEED INCREASED!</div>
+      </div>
+
+      <div class="screen" id="startScreen">
+        <div class="screenTitle">TURBO<br />RUSH</div>
+        <div class="screenSub">Neon Racing 2099</div>
+        <button class="btn" onclick="startGame()">▶ START RACE</button>
+
+        <div class="controls">
+          <div class="ctrl"><span class="key">←→</span> Steer</div>
+          <div class="ctrl"><span class="key">A D</span> Steer</div>
+          <div class="ctrl"><span class="key">SPACE</span> Nitro</div>
+          <div class="ctrl"><span class="key">P</span> Pause</div>
+        </div>
+      </div>
+
+      <div class="screen" id="gameOverScreen">
+        <div class="screenTitle" style="font-size: 32px">GAME<br />OVER</div>
+        <div class="screenSub">Race Ended</div>
+
+        <div class="statRow">
+          <div class="statItem"><div class="statNum" id="finalScore">0</div><div class="statLbl">Score</div></div>
+          <div class="statItem"><div class="statNum" id="finalLevel">1</div><div class="statLbl">Level</div></div>
+          <div class="statItem"><div class="statNum" id="finalBest">0</div><div class="statLbl">Best</div></div>
+        </div>
+
+        <button class="btn" onclick="startGame()">▶ RETRY</button>
+        <button class="btn red" onclick="showStart()">◀ MENU</button>
+      </div>
+
+      <div class="screen" id="pauseScreen">
+        <div class="screenTitle" style="font-size: 36px">PAUSED</div>
+        <button class="btn" onclick="togglePause()">▶ RESUME</button>
+        <button class="btn red" onclick="showStart()">◀ MENU</button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
