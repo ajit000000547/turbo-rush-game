@@ -15,6 +15,40 @@ const lBanner = document.getElementById('levelBanner');
 const lbTitle = document.getElementById('lbTitle');
 const cursor = document.getElementById('cursor');
 
+const requiredEls = {
+  wrapper,
+  road,
+  laneContainer,
+  playerCar,
+  scoreEl,
+  speedEl,
+  levelEl,
+  livesEl,
+  comboEl,
+  comboValEl,
+  nitroFill,
+  nitroTrail,
+  flash,
+  lBanner,
+  lbTitle,
+};
+
+const missingEls = Object.entries(requiredEls)
+  .filter(([, el]) => !el)
+  .map(([key]) => key);
+
+if (missingEls.length) {
+  console.warn('Turbo Rush: missing required DOM elements:', missingEls);
+}
+
+const getStoredBestScore = () => {
+  try {
+    return Number(localStorage.getItem('trBest') || 0);
+  } catch (error) {
+    return 0;
+  }
+};
+
 const ROAD_LEFT = 118;
 const ROAD_RIGHT = 300;
 const PLAYER_CAR_WIDTH = 48;
@@ -46,7 +80,7 @@ const state = {
   mLeft: false,
   mRight: false,
   mNitro: false,
-  bestScore: Number(localStorage.getItem('trBest') || 0),
+  bestScore: getStoredBestScore(),
 };
 
 function clamp(value, min, max) {
@@ -54,6 +88,7 @@ function clamp(value, min, max) {
 }
 
 function makeStars() {
+  if (!document.getElementById('sky')) return;
   const sky = document.getElementById('sky');
   for (let i = 0; i < 80; i++) {
     const star = document.createElement('div');
@@ -72,6 +107,7 @@ function makeStars() {
 }
 
 function makeLanes() {
+  if (!laneContainer) return;
   laneContainer.innerHTML = '';
   for (let i = 0; i < 5; i++) {
     const stripe = document.createElement('div');
@@ -84,12 +120,14 @@ function makeLanes() {
 
 function drawGrid() {
   const canvas = document.getElementById('groundGrid');
+  if (!canvas || !wrapper) return;
   const width = wrapper.clientWidth;
   const height = wrapper.clientHeight * 0.68;
   canvas.width = width;
   canvas.height = height;
 
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   ctx.clearRect(0, 0, width, height);
   ctx.strokeStyle = 'rgba(0, 207, 255, 0.14)';
   ctx.lineWidth = 1;
@@ -153,6 +191,7 @@ const powerupTypes = [
 ];
 
 function spawnEnemy() {
+  if (!wrapper) return;
   const laneW = 180 / 3;
   const lane = Math.floor(Math.random() * 3);
   const xBase = ROAD_LEFT + lane * laneW + laneW / 2 - 25;
@@ -170,6 +209,7 @@ function spawnEnemy() {
 }
 
 function spawnObstacle() {
+  if (!wrapper) return;
   const x = ROAD_LEFT + Math.random() * (ROAD_RIGHT - ROAD_LEFT - 40);
   const el = document.createElement('div');
   el.className = 'obstacle';
@@ -182,6 +222,7 @@ function spawnObstacle() {
 }
 
 function spawnPowerup() {
+  if (!wrapper) return;
   const type = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
   const x = ROAD_LEFT + 18 + Math.random() * (ROAD_RIGHT - ROAD_LEFT - 36);
   const el = document.createElement('div');
@@ -198,6 +239,7 @@ function spawnPowerup() {
 }
 
 function burst(x, y, color, count = 12) {
+  if (!wrapper) return;
   for (let i = 0; i < count; i++) {
     const p = document.createElement('div');
     p.className = 'particle';
@@ -223,6 +265,7 @@ function burst(x, y, color, count = 12) {
 }
 
 function scorePopup(x, y, text, color) {
+  if (!wrapper) return;
   const popup = document.createElement('div');
   popup.className = 'scorePopup';
   popup.textContent = text;
@@ -235,6 +278,7 @@ function scorePopup(x, y, text, color) {
 }
 
 function flashScreen(color, dur = 200) {
+  if (!flash) return;
   flash.style.background = color;
   flash.style.opacity = '0.45';
   setTimeout(() => {
@@ -243,6 +287,7 @@ function flashScreen(color, dur = 200) {
 }
 
 function shakeScreen() {
+  if (!wrapper) return;
   wrapper.style.animation = 'shake 0.4s ease';
   setTimeout(() => {
     wrapper.style.animation = '';
@@ -254,23 +299,23 @@ function collides(ax, ay, aw, ah, bx, by, bw, bh) {
 }
 
 function updateHUD() {
-  scoreEl.textContent = Math.floor(state.score);
-  speedEl.textContent = Math.floor(state.speed * 8) + ' km/h';
-  levelEl.textContent = state.level;
-  livesEl.textContent = '❤️'.repeat(state.lives) + (state.lives < 3 ? '🖤'.repeat(3 - state.lives) : '');
-  nitroFill.style.width = state.nitro + '%';
+  if (scoreEl) scoreEl.textContent = Math.floor(state.score);
+  if (speedEl) speedEl.textContent = Math.floor(state.speed * 8) + ' km/h';
+  if (levelEl) levelEl.textContent = state.level;
+  if (livesEl) livesEl.textContent = '❤️'.repeat(state.lives) + (state.lives < 3 ? '🖤'.repeat(3 - state.lives) : '');
+  if (nitroFill) nitroFill.style.width = state.nitro + '%';
 }
 
 function levelUp() {
   state.level += 1;
   state.speed = 3.5 + state.level * 0.7;
   state.spawnInterval = Math.max(35, 90 - state.level * 8);
-  lbTitle.textContent = 'LEVEL ' + state.level;
-  lBanner.classList.add('show');
+  if (lbTitle) lbTitle.textContent = 'LEVEL ' + state.level;
+  if (lBanner) lBanner.classList.add('show');
   flashScreen('#00ff44', 300);
   burst(210, 300, '#39ff14', 20);
   setTimeout(() => {
-    lBanner.classList.remove('show');
+    if (lBanner) lBanner.classList.remove('show');
   }, 1800);
 }
 
@@ -279,8 +324,8 @@ function hitPlayer(x, y) {
 
   state.lives -= 1;
   state.combo = 0;
-  comboEl.style.opacity = '0';
-  burst(x || state.playerX, y || (wrapper.clientHeight - PLAYER_BASE_Y - 48), '#ff2244', 18);
+  if (comboEl) comboEl.style.opacity = '0';
+  burst(x || state.playerX, y || (wrapper ? wrapper.clientHeight - PLAYER_BASE_Y - 48 : 300), '#ff2244', 18);
   flashScreen('#ff0000', 400);
   shakeScreen();
   state.invincible = true;
@@ -288,6 +333,7 @@ function hitPlayer(x, y) {
 
   let blinks = 0;
   const blinkInterval = setInterval(() => {
+    if (!playerCar) return;
     playerCar.style.opacity = blinks % 2 === 0 ? '0.3' : '1';
     blinks++;
     if (blinks > 10) {
@@ -315,7 +361,7 @@ function loop(ts) {
   const dt = Math.min((ts - lastTime) / 16.67, 3);
   lastTime = ts;
 
-  const wH = wrapper.clientHeight;
+  const wH = wrapper ? wrapper.clientHeight : 600;
   const baseSpeed = state.speed * dt;
   const spd = state.nitroActive ? baseSpeed * 1.8 : baseSpeed;
 
@@ -325,20 +371,24 @@ function loop(ts) {
   if (state.nitroActive) dx *= 1.2;
 
   state.playerX = clamp(state.playerX + dx * dt, ROAD_LEFT + 12, ROAD_RIGHT - 12);
-  playerCar.style.left = state.playerX + 'px';
+  if (playerCar) {
+    playerCar.style.left = state.playerX + 'px';
+  }
 
   const tilt = dx * 1.8;
-  playerCar.style.transform = `translateX(-50%) rotate(${tilt}deg)`;
+  if (playerCar) {
+    playerCar.style.transform = `translateX(-50%) rotate(${tilt}deg)`;
+  }
 
   const wantNitro = state.keys[' '] || state.mNitro;
   if (wantNitro && state.nitro > 0) {
     state.nitroActive = true;
     state.nitro = Math.max(0, state.nitro - 1.2 * dt);
-    nitroTrail.style.opacity = '1';
+    if (nitroTrail) nitroTrail.style.opacity = '1';
   } else {
     state.nitroActive = false;
     state.nitro = Math.min(100, state.nitro + 0.3 * dt);
-    nitroTrail.style.opacity = '0';
+    if (nitroTrail) nitroTrail.style.opacity = '0';
   }
 
   state.score += spd * 0.15 * (state.combo ? 1 + state.combo * 0.1 : 1);
@@ -347,7 +397,7 @@ function loop(ts) {
     state.comboTimer -= dt;
     if (state.comboTimer <= 0) {
       state.combo = 0;
-      comboEl.style.opacity = '0';
+      if (comboEl) comboEl.style.opacity = '0';
     }
   }
 
@@ -355,7 +405,7 @@ function loop(ts) {
     state.invTimer -= dt;
     if (state.invTimer <= 0) {
       state.invincible = false;
-      playerCar.style.opacity = '1';
+      if (playerCar) playerCar.style.opacity = '1';
     }
   }
 
@@ -400,8 +450,8 @@ function loop(ts) {
       enemy._passed = true;
       state.combo += 1;
       state.comboTimer = 180;
-      comboEl.style.opacity = '1';
-      comboValEl.textContent = 'x' + state.combo;
+      if (comboEl) comboEl.style.opacity = '1';
+      if (comboValEl) comboValEl.textContent = 'x' + state.combo;
       scorePopup(enemy.x, enemy.y, '+' + (10 * state.combo), '#39ff14');
       state.score += 10 * state.combo;
     }
@@ -452,7 +502,7 @@ function loop(ts) {
     return true;
   });
 
-  const stripes = laneContainer.querySelectorAll('.laneStripe');
+  const stripes = laneContainer ? laneContainer.querySelectorAll('.laneStripe') : [];
   stripes.forEach((stripe) => {
     stripe.style.animationDuration = (0.5 / spd) * 3 + 's';
   });
@@ -495,11 +545,16 @@ function applyPowerup(powerup) {
 }
 
 function startGame() {
+  if (!wrapper) return;
   wrapper.querySelectorAll('.enemyCar, .obstacle, .powerup, .particle, .scorePopup').forEach((el) => el.remove());
 
-  document.getElementById('startScreen').style.display = 'none';
-  document.getElementById('gameOverScreen').style.display = 'none';
-  document.getElementById('pauseScreen').style.display = 'none';
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const pauseScreen = document.getElementById('pauseScreen');
+
+  if (startScreen) startScreen.style.display = 'none';
+  if (gameOverScreen) gameOverScreen.style.display = 'none';
+  if (pauseScreen) pauseScreen.style.display = 'none';
 
   state.running = true;
   state.paused = false;
@@ -522,10 +577,12 @@ function startGame() {
   state.levelTimer = 0;
   state.levelInterval = 600;
 
-  comboEl.style.opacity = '0';
-  nitroTrail.style.opacity = '0';
-  playerCar.style.opacity = '1';
-  playerCar.style.left = state.playerX + 'px';
+  if (comboEl) comboEl.style.opacity = '0';
+  if (nitroTrail) nitroTrail.style.opacity = '0';
+  if (playerCar) {
+    playerCar.style.opacity = '1';
+    playerCar.style.left = state.playerX + 'px';
+  }
 
   updateHUD();
   lastTime = performance.now();
@@ -537,29 +594,44 @@ function gameOver() {
 
   if (state.score > state.bestScore) {
     state.bestScore = Math.floor(state.score);
-    localStorage.setItem('trBest', String(state.bestScore));
+    try {
+      localStorage.setItem('trBest', String(state.bestScore));
+    } catch (error) {
+      // Ignore storage errors in restricted browser contexts.
+    }
   }
 
-  document.getElementById('finalScore').textContent = Math.floor(state.score);
-  document.getElementById('finalLevel').textContent = state.level;
-  document.getElementById('finalBest').textContent = state.bestScore;
-  document.getElementById('gameOverScreen').style.display = 'flex';
+  const finalScore = document.getElementById('finalScore');
+  const finalLevel = document.getElementById('finalLevel');
+  const finalBest = document.getElementById('finalBest');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+
+  if (finalScore) finalScore.textContent = Math.floor(state.score);
+  if (finalLevel) finalLevel.textContent = state.level;
+  if (finalBest) finalBest.textContent = state.bestScore;
+  if (gameOverScreen) gameOverScreen.style.display = 'flex';
   flashScreen('#ff0000', 500);
 }
 
 function showStart() {
   state.running = false;
-  wrapper.querySelectorAll('.enemyCar, .obstacle, .powerup').forEach((node) => node.remove());
-  document.getElementById('gameOverScreen').style.display = 'none';
-  document.getElementById('pauseScreen').style.display = 'none';
-  document.getElementById('startScreen').style.display = 'flex';
+  if (wrapper) {
+    wrapper.querySelectorAll('.enemyCar, .obstacle, .powerup').forEach((node) => node.remove());
+  }
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const pauseScreen = document.getElementById('pauseScreen');
+  const startScreen = document.getElementById('startScreen');
+  if (gameOverScreen) gameOverScreen.style.display = 'none';
+  if (pauseScreen) pauseScreen.style.display = 'none';
+  if (startScreen) startScreen.style.display = 'flex';
 }
 
 function togglePause() {
   if (!state.running) return;
 
   state.paused = !state.paused;
-  document.getElementById('pauseScreen').style.display = state.paused ? 'flex' : 'none';
+  const pauseScreen = document.getElementById('pauseScreen');
+  if (pauseScreen) pauseScreen.style.display = state.paused ? 'flex' : 'none';
 
   if (!state.paused) {
     lastTime = performance.now();
@@ -587,28 +659,36 @@ const mLeft = document.getElementById('mLeft');
 const mRight = document.getElementById('mRight');
 const mNitro = document.getElementById('mNitro');
 
-mLeft.addEventListener('touchstart', () => { state.mLeft = true; }, { passive: true });
-mLeft.addEventListener('touchend', () => { state.mLeft = false; });
-mLeft.addEventListener('mousedown', () => { state.mLeft = true; });
-mLeft.addEventListener('mouseup', () => { state.mLeft = false; });
+if (mLeft) {
+  mLeft.addEventListener('touchstart', () => { state.mLeft = true; }, { passive: true });
+  mLeft.addEventListener('touchend', () => { state.mLeft = false; });
+  mLeft.addEventListener('mousedown', () => { state.mLeft = true; });
+  mLeft.addEventListener('mouseup', () => { state.mLeft = false; });
+}
 
-mRight.addEventListener('touchstart', () => { state.mRight = true; }, { passive: true });
-mRight.addEventListener('touchend', () => { state.mRight = false; });
-mRight.addEventListener('mousedown', () => { state.mRight = true; });
-mRight.addEventListener('mouseup', () => { state.mRight = false; });
+if (mRight) {
+  mRight.addEventListener('touchstart', () => { state.mRight = true; }, { passive: true });
+  mRight.addEventListener('touchend', () => { state.mRight = false; });
+  mRight.addEventListener('mousedown', () => { state.mRight = true; });
+  mRight.addEventListener('mouseup', () => { state.mRight = false; });
+}
 
-mNitro.addEventListener('touchstart', () => { state.mNitro = true; }, { passive: true });
-mNitro.addEventListener('touchend', () => { state.mNitro = false; });
-mNitro.addEventListener('mousedown', () => { state.mNitro = true; });
-mNitro.addEventListener('mouseup', () => { state.mNitro = false; });
+if (mNitro) {
+  mNitro.addEventListener('touchstart', () => { state.mNitro = true; }, { passive: true });
+  mNitro.addEventListener('touchend', () => { state.mNitro = false; });
+  mNitro.addEventListener('mousedown', () => { state.mNitro = true; });
+  mNitro.addEventListener('mouseup', () => { state.mNitro = false; });
+}
 
-document.addEventListener('mousemove', (event) => {
-  cursor.style.left = event.clientX + 'px';
-  cursor.style.top = event.clientY + 'px';
-});
+if (cursor) {
+  document.addEventListener('mousemove', (event) => {
+    cursor.style.left = event.clientX + 'px';
+    cursor.style.top = event.clientY + 'px';
+  });
+}
 
 makeStars();
 makeLanes();
 drawGrid();
 updateHUD();
-playerCar.style.left = state.playerX + 'px';
+if (playerCar) playerCar.style.left = state.playerX + 'px';

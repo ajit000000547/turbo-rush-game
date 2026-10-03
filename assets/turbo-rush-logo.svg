@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Turbo Rush logo">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0b1022"/>
+      <stop offset="100%" stop-color="#081321"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#ff2244"/>
+      <stop offset="50%" stop-color="#ff8a00"/>
+      <stop offset="100%" stop-color="#ffe600"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bg)"/>
+  <path d="M23 76 L44 36 L61 52 L83 28 L105 76 Z" fill="none" stroke="url(#accent)" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M30 82 H98 L88 100 H40 Z" fill="#00cfff" opacity="0.9"/>
+  <circle cx="46" cy="52" r="6" fill="#ffe600"/>
+  <circle cx="84" cy="44" r="6" fill="#ffe600"/>
+  <path d="M24 92 L36 70 L46 92 Z" fill="#ff2244" opacity="0.9"/>
+  <path d="M82 92 L94 70 L104 92 Z" fill="#ff2244" opacity="0.9"/>
+</svg>
