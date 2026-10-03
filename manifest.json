@@ -1,0 +1,33 @@
+{
+  "name": "Turbo Rush - Neon Racing Game",
+  "short_name": "Turbo Rush",
+  "description": "A high-speed neon-styled racing game with smooth gameplay, powerups, and progressive difficulty",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060b1a",
+  "theme_color": "#00cfff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/turbo-rush-logo.svg",
+      "sizes": "192x192 256x256 384x384 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/turbo-rush-logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["games"],
+  "screenshots": [
+    {
+      "src": "assets/turbo-rush-logo.svg",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ]
+}
