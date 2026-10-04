@@ -84,6 +84,138 @@ const state = {
   bestScore: getStoredBestScore(),
 };
 
+let audioCtx = null;
+let engineOsc = null;
+let engineGain = null;
+let soundEnabled = true;
+
+function ensureAudioContext() {
+  if (!soundEnabled) return null;
+
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return null;
+
+  if (!audioCtx) {
+    audioCtx = new AudioCtor();
+  }
+
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+
+  return audioCtx;
+}
+
+function playTone({
+  frequency = 440,
+  duration = 0.18,
+  type = 'sine',
+  volume = 0.04,
+  sweep = 0,
+  attack = 0.01,
+}) {
+  const ctx = ensureAudioContext();
+  if (!ctx) return;
+
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+
+  if (sweep) {
+    oscillator.frequency.exponentialRampToValueAtTime(
+      Math.max(40, frequency + sweep),
+      ctx.currentTime + duration
+    );
+  }
+
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(volume, ctx.currentTime + attack);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+  oscillator.start();
+  oscillator.stop(ctx.currentTime + duration + 0.05);
+}
+
+function startEngineSound() {
+  const ctx = ensureAudioContext();
+  if (!ctx || engineOsc) return;
+
+  engineOsc = ctx.createOscillator();
+  engineGain = ctx.createGain();
+
+  engineOsc.type = 'sawtooth';
+  engineOsc.frequency.setValueAtTime(70, ctx.currentTime);
+
+  engineGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+
+  engineOsc.connect(engineGain);
+  engineGain.connect(ctx.destination);
+  engineOsc.start();
+  updateEngineSound();
+}
+
+function stopEngineSound() {
+  if (!engineOsc || !engineGain || !audioCtx) return;
+
+  const now = audioCtx.currentTime;
+  engineGain.gain.cancelScheduledValues(now);
+  engineGain.gain.setValueAtTime(engineGain.gain.value || 0.0001, now);
+  engineGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+  setTimeout(() => {
+    engineOsc.stop();
+    engineOsc.disconnect();
+    engineGain.disconnect();
+    engineOsc = null;
+    engineGain = null;
+  }, 180);
+}
+
+function updateEngineSound() {
+  if (!engineOsc || !engineGain || !audioCtx) return;
+
+  const now = audioCtx.currentTime;
+  const targetFreq = 70 + Math.max(0, state.speed * 18) + (state.nitroActive ? 25 : 0);
+  const targetGain = state.running && !state.paused ? 0.025 + (state.nitroActive ? 0.03 : 0) : 0.0001;
+
+  engineOsc.frequency.setTargetAtTime(targetFreq, now, 0.15);
+  engineGain.gain.setTargetAtTime(targetGain, now, 0.16);
+}
+
+function playCrashSound() {
+  playTone({ frequency: 120, duration: 0.18, type: 'sawtooth', volume: 0.12, sweep: -80 });
+  setTimeout(() => {
+    playTone({ frequency: 60, duration: 0.12, type: 'square', volume: 0.08, sweep: -40 });
+  }, 40);
+}
+
+function playPickupSound(type) {
+  const map = {
+    nitro: { frequency: 320, duration: 0.18, type: 'triangle', volume: 0.08, sweep: 140 },
+    life: { frequency: 420, duration: 0.2, type: 'sine', volume: 0.06, sweep: 160 },
+    shield: { frequency: 260, duration: 0.22, type: 'triangle', volume: 0.07, sweep: 110 },
+    slow: { frequency: 180, duration: 0.24, type: 'square', volume: 0.06, sweep: 70 },
+  };
+
+  const config = map[type] || map.nitro;
+  playTone(config);
+}
+
+function playLevelUpSound() {
+  playTone({ frequency: 440, duration: 0.14, type: 'triangle', volume: 0.08, sweep: 170 });
+  setTimeout(() => {
+    playTone({ frequency: 660, duration: 0.16, type: 'triangle', volume: 0.07, sweep: 220 });
+  }, 80);
+}
+
+function playNitroSound() {
+  playTone({ frequency: 180, duration: 0.16, type: 'sawtooth', volume: 0.05, sweep: 120 });
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -341,6 +473,7 @@ function levelUp() {
   if (lBanner) lBanner.classList.add('show');
   flashScreen('#00ff44', 300);
   burst(210, 300, '#39ff14', 20);
+  playLevelUpSound();
   setTimeout(() => {
     if (lBanner) lBanner.classList.remove('show');
   }, 1800);
@@ -352,6 +485,7 @@ function hitPlayer(x, y) {
   state.lives -= 1;
   state.combo = 0;
   if (comboEl) comboEl.style.opacity = '0';
+  playCrashSound();
   burst(x || state.playerX, y || (wrapper ? wrapper.clientHeight - PLAYER_BASE_Y - 48 : 300), '#ff2244', 18);
   flashScreen('#ff0000', 400);
   shakeScreen();
@@ -409,8 +543,14 @@ function loop(ts) {
 
   const wantNitro = state.keys[' '] || state.mNitro;
   if (wantNitro && state.nitro > 0) {
+    const wasNitro = state.nitroActive;
     state.nitroActive = true;
     state.nitro = Math.max(0, state.nitro - 1.2 * dt);
+
+    if (!wasNitro) {
+      playNitroSound();
+    }
+
     if (nitroTrail) nitroTrail.style.opacity = '1';
     sparkNitroTrail();
   } else {
@@ -419,6 +559,7 @@ function loop(ts) {
     if (nitroTrail) nitroTrail.style.opacity = '0';
   }
 
+  updateEngineSound();
   state.score += spd * 0.15 * (state.combo ? 1 + state.combo * 0.1 : 1);
 
   if (state.combo > 0) {
@@ -543,6 +684,7 @@ function applyPowerup(powerup) {
   burst(powerup.x, powerup.y, powerup.color, 14);
   scorePopup(powerup.x, powerup.y, powerup.label, powerup.color);
   flashScreen(powerup.color, 200);
+  playPickupSound(powerup.type);
 
   switch (powerup.type) {
     case 'nitro':
@@ -574,6 +716,8 @@ function applyPowerup(powerup) {
 
 function startGame() {
   if (!wrapper) return;
+  ensureAudioContext();
+  startEngineSound();
   wrapper.querySelectorAll('.enemyCar, .obstacle, .powerup, .particle, .scorePopup').forEach((el) => el.remove());
 
   const startScreen = document.getElementById('startScreen');
@@ -620,6 +764,7 @@ function startGame() {
 
 function gameOver() {
   state.running = false;
+  stopEngineSound();
 
   if (state.score > state.bestScore) {
     state.bestScore = Math.floor(state.score);
@@ -644,6 +789,7 @@ function gameOver() {
 
 function showStart() {
   state.running = false;
+  stopEngineSound();
   if (wrapper) {
     wrapper.querySelectorAll('.enemyCar, .obstacle, .powerup').forEach((node) => node.remove());
   }
@@ -666,9 +812,12 @@ function togglePause() {
     lastTime = performance.now();
     requestAnimationFrame(loop);
   }
+
+  updateEngineSound();
 }
 
 document.addEventListener('keydown', (event) => {
+  ensureAudioContext();
   state.keys[event.key] = true;
 
   if (event.key === 'p' || event.key === 'P') {
@@ -689,23 +838,23 @@ const mRight = document.getElementById('mRight');
 const mNitro = document.getElementById('mNitro');
 
 if (mLeft) {
-  mLeft.addEventListener('touchstart', () => { state.mLeft = true; }, { passive: true });
+  mLeft.addEventListener('touchstart', () => { ensureAudioContext(); state.mLeft = true; }, { passive: true });
   mLeft.addEventListener('touchend', () => { state.mLeft = false; });
-  mLeft.addEventListener('mousedown', () => { state.mLeft = true; });
+  mLeft.addEventListener('mousedown', () => { ensureAudioContext(); state.mLeft = true; });
   mLeft.addEventListener('mouseup', () => { state.mLeft = false; });
 }
 
 if (mRight) {
-  mRight.addEventListener('touchstart', () => { state.mRight = true; }, { passive: true });
+  mRight.addEventListener('touchstart', () => { ensureAudioContext(); state.mRight = true; }, { passive: true });
   mRight.addEventListener('touchend', () => { state.mRight = false; });
-  mRight.addEventListener('mousedown', () => { state.mRight = true; });
+  mRight.addEventListener('mousedown', () => { ensureAudioContext(); state.mRight = true; });
   mRight.addEventListener('mouseup', () => { state.mRight = false; });
 }
 
 if (mNitro) {
-  mNitro.addEventListener('touchstart', () => { state.mNitro = true; }, { passive: true });
+  mNitro.addEventListener('touchstart', () => { ensureAudioContext(); state.mNitro = true; }, { passive: true });
   mNitro.addEventListener('touchend', () => { state.mNitro = false; });
-  mNitro.addEventListener('mousedown', () => { state.mNitro = true; });
+  mNitro.addEventListener('mousedown', () => { ensureAudioContext(); state.mNitro = true; });
   mNitro.addEventListener('mouseup', () => { state.mNitro = false; });
 }
 
